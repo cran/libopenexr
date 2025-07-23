@@ -1,43 +1,12 @@
 # Prepare your package for installation here.
 # Use 'define()' to define configuration variables.
 # Use 'configure_file()' to substitute configuration values.
+
 # Common: Find C/C++ compilers, deal with ccache, find the architecture
 # and find CMake.
 is_windows = identical(.Platform$OS.type, "windows")
 is_macos = identical(Sys.info()[['sysname']], "Darwin")
 
-CC_RAW = r_cmd_config("CC")
-CXX_RAW = r_cmd_config("CXX")
-
-CC_ARGS = strsplit(CC_RAW, " ")[[1]]
-CXX_ARGS = strsplit(CXX_RAW, " ")[[1]]
-
-uses_ccache = FALSE
-if (grepl("ccache", CC_ARGS[1])) {
-	uses_ccache = TRUE
-	CC = paste(CC_ARGS[-1], collapse = " ")
-} else {
-	CC = CC_ARGS[1]
-}
-
-if (grepl("ccache", CXX_ARGS[1])) {
-	uses_ccache = TRUE
-	CXX = paste(CXX_ARGS[-1], collapse = " ")
-} else {
-	CXX = CXX_ARGS[1]
-}
-
-CC_COMPILER = strsplit(CC, " ")[[1]][1]
-CXX_COMPILER = strsplit(CXX, " ")[[1]][1]
-
-CC_FULL = normalizePath(
-	Sys.which(CC_COMPILER),
-	winslash = "/"
-)
-CXX_FULL = normalizePath(
-	Sys.which(CXX_COMPILER),
-	winslash = "/"
-)
 TARGET_ARCH = Sys.info()[["machine"]]
 PACKAGE_BASE_DIR = normalizePath(getwd(), winslash = "/")
 
@@ -80,6 +49,7 @@ DEFLATE_LIB_ARCH = normalizePath(
 # Use pkg-config (if available) to find a system library
 package_name = "libopenexr"
 static_library_name = "libOpenEXR-3_4"
+static_lib_filename = sprintf("%s.a", static_library_name)
 
 package_version = "3.4.0"
 lib_system = ""
@@ -87,8 +57,9 @@ lib_system = ""
 pkgconfig_path = Sys.which("pkg-config")
 
 lib_exists = FALSE
-LIB_INCLUDE_LINE = ""
-LIB_LINK_LINE = ""
+LIB_INCLUDE_ASSIGN = ""
+LIB_LINK_ASSIGN = ""
+lib_link = ""
 
 if (nzchar(pkgconfig_path)) {
 	pc_status = system2(
@@ -102,62 +73,105 @@ if (nzchar(pkgconfig_path)) {
 
 	if (lib_exists) {
 		message(
-			"*** configure: system libOpenEXR-3_4 exists, using that for building the library"
-		)
-
-		lib_include = system2(
-			pkgconfig_path,
-			c("--cflags", package_name),
-			stdout = TRUE
-		)
-		message(
-			sprintf("*** configure: using include path '%s'", lib_include)
-		)
-		lib_link = system2(
-			pkgconfig_path,
-			c("--static", "--libs", package_name),
-			stdout = TRUE
-		)
-		message(
-			sprintf("*** configure: using link path '%s'", lib_link)
-		)
-		LIB_INCLUDE_LINE = sprintf("LIB_INCLUDE = %s", lib_include)
-		LIB_LINK_LINE = sprintf("LIB_LINK = %s", lib_link)
-	}
-}
-
-if (!lib_exists) {
-	fallback_prefixes = c(
-		"/opt/R/arm64",
-		"/opt/R/x86_64",
-		"/opt/homebrew",
-		"/usr/local",
-		"/usr"
-	)
-
-	for (prefix in fallback_prefixes) {
-		lib_exists_check = file.exists(file.path(
-			prefix,
-			"lib",
-			sprintf("%s.a", static_library_name)
-		))
-		header_exists = dir.exists(file.path(prefix, "include", "OpenEXR"))
-
-		if (lib_exists_check && header_exists) {
-			lib_exists = TRUE
-			lib_link = file.path(
-				prefix,
-				"lib"
+			sprintf(
+				"*** configure: system %s exists, using that for building the library",
+				static_library_name
 			)
-			lib_include = file.path(
-				prefix,
-				"include"
+		)
+		quote_paths = function(pkgconfig_output, prefix = "-I") {
+			include_dirs = strsplit(
+				trimws(gsub(prefix, "", pkgconfig_output, fixed = TRUE)),
+				"\\s+"
+			)[[1]]
+
+			if (length(include_dirs) == 0) {
+				return("")
+			}
+			if (length(include_dirs) == 1 && include_dirs == "") {
+				return("")
+			}
+
+			return(
+				paste(
+					paste0(
+						prefix,
+						vapply(
+							include_dirs,
+							shQuote,
+							"character"
+						)
+					),
+					collapse = " "
+				)
 			)
-			LIB_INCLUDE_LINE = sprintf("LIB_INCLUDE = %s", lib_include)
-			LIB_LINK_LINE = sprintf("LIB_LINK = %s", lib_link)
-			break
 		}
+		check_existence = function(lib_link_output, static_lib_filename) {
+			any(file.exists(file.path(
+				gsub(
+					pattern = "(-L)|('|\")",
+					"",
+					x = unlist(strsplit(
+						lib_link_output,
+						split = " "
+					))
+				),
+				static_lib_filename
+			)))
+		}
+
+		lib_include = quote_paths(
+			system2(
+				pkgconfig_path,
+				c("--cflags", package_name),
+				stdout = TRUE
+			),
+			prefix = "-I"
+		)
+
+		lib_link = quote_paths(
+			system2(
+				pkgconfig_path,
+				c("--libs-only-L", package_name),
+				stdout = TRUE
+			),
+			prefix = "-L"
+		)
+
+		if (!check_existence(lib_link, static_lib_filename)) {
+			lib_exists = FALSE
+		} else {
+			if (nzchar(lib_include)) {
+				message(
+					sprintf(
+						"*** configure: using include path '%s'",
+						lib_include
+					)
+				)
+				LIB_INCLUDE_ASSIGN = sprintf('LIB_INCLUDE = %s', lib_include) #This should already have -I
+			} else {
+				lib_exists = FALSE
+			}
+			if (nzchar(lib_link)) {
+				message(
+					sprintf(
+						"*** configure: using link path '%s'",
+						lib_link
+					)
+				)
+				LIB_LINK_ASSIGN = sprintf('LIB_LINK = %s', lib_link) #This should already have -L
+			} else {
+				message(sprintf(
+					"*** %s found by pkg-config, but returned no link directory--skipping",
+					package_name
+				))
+				lib_exists = FALSE
+			}
+		}
+	} else {
+		message(sprintf("*** %s not found by pkg-config", package_name))
 	}
+} else {
+	message("*** pkg-config not available, building bundled version")
 }
 
 syswhich_cmake = Sys.which("cmake")
@@ -183,11 +197,12 @@ if (syswhich_cmake != "") {
 define(
 	PACKAGE_BASE_DIR = PACKAGE_BASE_DIR,
 	TARGET_ARCH = TARGET_ARCH,
-	CC_FULL = CC_FULL,
-	CXX_FULL = CXX_FULL,
 	CMAKE = CMAKE,
+	LIB_EXISTS = as.character(lib_exists),
 	IMATH_INCLUDE_DIR = IMATH_INCLUDE_DIR,
 	IMATH_LIB_ARCH = IMATH_LIB_ARCH,
+	LIB_LINK_ASSIGN = LIB_LINK_ASSIGN,
+	LIB_INCLUDE_ASSIGN = LIB_INCLUDE_ASSIGN,
 	DEFLATE_LIB_ARCH = DEFLATE_LIB_ARCH
 )
 
@@ -198,16 +213,12 @@ if (!dir.exists("src/OpenEXR/build")) {
 file_cache = "src/OpenEXR/build/initial-cache.cmake"
 writeLines(
 	sprintf(
-		r"-{set(CMAKE_C_COMPILER "%s" CACHE FILEPATH "C compiler")
-set(CMAKE_CXX_COMPILER "%s" CACHE FILEPATH "C++ compiler")
-set(CMAKE_C_FLAGS "-fPIC -fvisibility=hidden" CACHE STRING "C flags")
+		r"-{set(CMAKE_C_FLAGS "-fPIC -fvisibility=hidden" CACHE STRING "C flags")
 set(CMAKE_CXX_FLAGS "-fPIC -fvisibility=hidden -fvisibility-inlines-hidden" CACHE STRING "C++ flags")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Position independent code")
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")
 set(CMAKE_OSX_ARCHITECTURES "%s" CACHE STRING "Target architecture")}-",
-		CC_FULL,
-		CXX_FULL,
 		TARGET_ARCH
 	),
 	file_cache
@@ -244,7 +255,9 @@ cmake_cfg <- c(
 setwd(build_dir)
 
 status <- system2(CMAKE, cmake_cfg)
-if (status != 0) stop("CMake configure step failed")
+if (status != 0) {
+	stop("CMake configure step failed")
+}
 
 setwd(PACKAGE_BASE_DIR)
 
