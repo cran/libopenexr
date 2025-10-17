@@ -1,4 +1,4 @@
-dbefa518207249cbc11c55047e0e1e2b *DESCRIPTION
+2b45086dc21263a2ab05bd2de12ece16 *DESCRIPTION
 8853c02eaf8bbb5e379d694e8aead4bd *LICENSE
 a28f4d75b9ccfaab8e9c3cf9d69e8889 *NAMESPACE
 6dd76711d99c966e0dca4a69c1d4ae87 *R/data.R
@@ -160,7 +160,7 @@ ba46be6e08a5f6dd45262deb68057ed8 *inst/include/OpenEXR/openexr_version.h
 889178cd5e9b221fc5940704d3669436 *man/widecolorgamut.Rd
 51a478195f56af39af561155b4a3d867 *man/write_exr.Rd
 1273d590f9349aa0e29458042d133c74 *src/Makevars.in
-69defb4ef834c3b3c1ef794191e2ceaa *src/Makevars.win.in
+2145c7c8cbf4fea2cfc6915c7d2e50fe *src/Makevars.win.in
 ac988685b5e07cfb0be0df64260c13dd *src/OpenEXR/CMakeLists.txt
 b0f98dc4bafd54ae93bbd833040c68a3 *src/OpenEXR/LICENSE.md
 98776f93d7cdf253eb438473c12f12dd *src/OpenEXR/PATENTS
