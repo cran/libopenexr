@@ -23,16 +23,15 @@
 #include <ImfTileDescription.h>
 #include <ImfXdr.h>
 
-#include <codecvt>
-#include <locale>
+#include <cwchar>
+#include <cstring>
 
-// START TMW NEW
-#include <string>
-#include <cstring>     // for std::strlen
 #if defined(_WIN32)
-  #include <windows.h>
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
 #endif
-// END TMW NEW
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
@@ -2004,71 +2003,44 @@ getChunkOffsetTableSize (const Header& header)
         return getTiledChunkOffsetTableSize (header);
 }
 
-// std::wstring
-// WidenFilename (const char* filename)
-// {
-//     std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-//     return converter.from_bytes (filename);
-// }
-
-// START TMW NEW
-inline std::wstring
-WidenFilename(const char* filename)
+std::wstring
+WidenFilename (const char* filename)
 {
-    if (!filename)
-        return {};
+    if (!filename) { return std::wstring (); }
 
 #if defined(_WIN32)
-    // Ask for size (includes the terminating null)
-    int size = ::MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        filename,
-        -1,       // treat 'filename' as null‑terminated
-        nullptr,
-        0
-    );
-    if (size == 0) {
-        // conversion failed
-        throw std::system_error(
-            GetLastError(),
-            std::system_category(),
-            "MultiByteToWideChar failed"
-        );
-    }
+    int fnlen = static_cast<int> (std::strlen (filename));
+    int wsize = MultiByteToWideChar (CP_UTF8, 0, filename, fnlen, NULL, 0);
+    if (wsize <= 0) { return std::wstring (); }
 
-    // Allocate and fill
-    std::wstring wstr(static_cast<size_t>(size), L'\0');
-    int got = ::MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        filename,
-        -1,
-        &wstr[0],
-        size
-    );
-    if (got == 0) {
-        throw std::system_error(
-            GetLastError(),
-            std::system_category(),
-            "MultiByteToWideChar failed"
-        );
-    }
-
-    return wstr;
-
+    std::wstring out (static_cast<size_t> (wsize), L'\0');
+    MultiByteToWideChar (CP_UTF8, 0, filename, fnlen, &out[0], wsize);
+    return out;
 #else
-    // POSIX: filenames are byte‑sequences.  Widen each byte.
-    size_t len = std::strlen(filename);
-    std::wstring wstr;
-    wstr.reserve(len);
-    for (size_t i = 0; i < len; ++i) {
-        wstr.push_back(static_cast<unsigned char>(filename[i]));
+    std::mbstate_t state = std::mbstate_t ();
+    const char*    src   = filename;
+    size_t         wsize = std::mbsrtowcs (NULL, &src, 0, &state);
+
+    if (wsize == static_cast<size_t> (-1))
+    {
+        std::wstring out;
+        out.reserve (std::strlen (filename));
+        for (const unsigned char* p =
+                 reinterpret_cast<const unsigned char*> (filename);
+             *p; ++p)
+            out.push_back (static_cast<wchar_t> (*p));
+        return out;
     }
-    return wstr;
+
+    if (wsize == 0) { return std::wstring (); }
+
+    std::wstring out (wsize, L'\0');
+    state = std::mbstate_t ();
+    src   = filename;
+    std::mbsrtowcs (&out[0], &src, wsize, &state);
+    return out;
 #endif
 }
-// END TMW NEW
 
 const char*
 getLibraryVersion ()

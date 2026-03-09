@@ -17,10 +17,20 @@
 //
 
 #ifndef INCLUDED_OPENEXR_VERSION_H
-#define OPENEXR_VERSION_MAJOR 3
-#define OPENEXR_VERSION_MINOR 4
+#define OPENEXR_VERSION_MAJOR 4
+#define OPENEXR_VERSION_MINOR 0
 #define OPENEXR_VERSION_PATCH 0
+#define OPENEXR_SOVERSION 99
 #endif
+
+#define OPENEXR_IMATH_SOVERSION 
+#define OPENEXR_IMATH_VERSION_MAJOR 3
+#define OPENEXR_IMATH_VERSION_MINOR 2
+#define OPENEXR_IMATH_VERSION_PATCH 2
+
+#define OPENEXR_OPENJPH_VERSION_MAJOR 0
+#define OPENEXR_OPENJPH_VERSION_MINOR 25
+#define OPENEXR_OPENJPH_VERSION_PATCH 3
 
 //
 // Options / configuration based on O.S. / compiler
@@ -43,7 +53,7 @@
 // Current internal library namespace name
 //
 #define OPENEXR_IMF_INTERNAL_NAMESPACE_CUSTOM 0
-#define OPENEXR_IMF_INTERNAL_NAMESPACE Imf_3_4
+#define OPENEXR_IMF_INTERNAL_NAMESPACE Imf_4_0
 
 //
 // Current public user namespace name
@@ -56,14 +66,14 @@
 // Version string for runtime access
 //
 
-#define OPENEXR_VERSION_STRING "3.4.0"
-#define OPENEXR_PACKAGE_STRING "OpenEXR 3.4.0-dev"
+#define OPENEXR_VERSION_STRING "4.0.0"
+#define OPENEXR_PACKAGE_STRING "OpenEXR 4.0.0-dev"
 
 #define OPENEXR_VERSION_RELEASE_TYPE "-dev"
 // Deprecated, for back compatibility:
 #define OPENEXR_VERSION_EXTRA "-dev"
 
-#define OPENEXR_LIB_VERSION_STRING "99.3.4.0"
+#define OPENEXR_LIB_VERSION_STRING "99.4.0.0"
 
 // clang-format on
 
@@ -82,6 +92,8 @@
 // Whether the user configured the library to have symbol visibility
 // tagged
 #define OPENEXR_ENABLE_API_VISIBILITY
+
+/* #undef OPENEXR_CORE_FUNCTIONS_EMBEDDED */
 
 /// \defgroup ExportMacros Macros to manage symbol visibility
 ///

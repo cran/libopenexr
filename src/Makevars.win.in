@@ -7,8 +7,10 @@ INST_DIR = @PACKAGE_BASE_DIR@/inst
 LIB_DIR = @PACKAGE_BASE_DIR@/inst/lib/@TARGET_ARCH@
 INCLUDE_DIR = $(INST_DIR)/include/OpenEXR
 IMATH_LIB = @IMATH_LIB_ARCH@
-STATIC_LIB = $(LIB_DIR)/libOpenEXR-3_4.a
-DEFLATE_LIB = @DEFLATE_LIB_ARCH@
+OPENEXR_API = @OPENEXR_API@
+STATIC_LIB = $(LIB_DIR)/libOpenEXR-$(OPENEXR_API).a
+OPENJPH_LINK_FLAGS = @OPENJPH_LINK_FLAGS@
+OPENJPH_STATIC_LIB = @OPENJPH_STATIC_LIB@
 
 @LIB_INCLUDE_ASSIGN@
 @LIB_LINK_ASSIGN@
@@ -19,12 +21,12 @@ ifeq (@LIB_EXISTS@, FALSE)
   # Set include paths from above
   PKG_CPPFLAGS = -I$(INCLUDE_DIR) -I$(OPENEXR_DIR)/include/OpenEXR -I@IMATH_INCLUDE_DIR@
   PKG_CFLAGS = -I$(INCLUDE_DIR) -I$(OPENEXR_DIR)/include/OpenEXR -I@IMATH_INCLUDE_DIR@
-  PKG_LIBS = -L$(LIB_DIR)  -L$(IMATH_LIB) -lImath-3_2 -lOpenEXRUtil-3_4 -lOpenEXR-3_4 -lOpenEXRCore-3_4 -lIlmThread-3_4 -lIex-3_4 -L$(DEFLATE_LIB) -ldeflate
+  PKG_LIBS = -L$(LIB_DIR) -lOpenEXRUtil-$(OPENEXR_API) -lOpenEXR-$(OPENEXR_API) -lOpenEXRCore-$(OPENEXR_API) -lIlmThread-$(OPENEXR_API) -lIex-$(OPENEXR_API) $(OPENJPH_LINK_FLAGS) -L$(IMATH_LIB) -lImath-3_2
 else
   # LIB_INCLUDE/LIB_LINK already include -I/-L
   PKG_CPPFLAGS = $(LIB_INCLUDE) -I$(OPENEXR_DIR)/include/OpenEXR -I@IMATH_INCLUDE_DIR@
   PKG_CFLAGS = $(LIB_INCLUDE) -I$(OPENEXR_DIR)/include/OpenEXR -I@IMATH_INCLUDE_DIR@
-  PKG_LIBS = $(LIB_LINK)  -L$(IMATH_LIB) -lImath-3_2 -lOpenEXRUtil-3_4 -lOpenEXR-3_4 -lOpenEXRCore-3_4 -lIlmThread-3_4 -lIex-3_4 -L$(DEFLATE_LIB) -ldeflate
+  PKG_LIBS = $(LIB_LINK) -lOpenEXRUtil-$(OPENEXR_API) -lOpenEXR-$(OPENEXR_API) -lOpenEXRCore-$(OPENEXR_API) -lIlmThread-$(OPENEXR_API) -lIex-$(OPENEXR_API) $(OPENJPH_LINK_FLAGS) -L$(IMATH_LIB) -lImath-3_2
 endif
 
 # Required for linking with static libraries
@@ -32,17 +34,13 @@ CFLAGS = $(CFLAGS) $(CPICFLAGS)
 CXXFLAGS = $(CXXFLAGS) $(CXXPICFLAGS)
 
 # Main target
-all: $(OBJECTS) 
+all: $(OBJECTS)
 
 
-$(OBJECTS): $(STATIC_LIB)
+$(OBJECTS): $(STATIC_LIB) $(OPENJPH_STATIC_LIB)
 
-$(STATIC_LIB): 
+$(STATIC_LIB) $(OPENJPH_STATIC_LIB):
 	cd $(OPENEXR_DIR) && \
-	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
-	  "src/OpenEXR/src/lib/OpenEXRCore/string.c" \
-	  "#[ ]+pragma.+" \
-	  "" && \
 	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
 	  "src/OpenEXR/src/lib/OpenEXR/ImfInputPart.cpp" \
 	  "file->isOptimizationEnabled \(\)" \
@@ -65,40 +63,63 @@ $(STATIC_LIB):
 	  "" && \
 	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
 	  "src/OpenEXR/src/lib/IlmThread/IlmThreadProcessGroup.h" \
-	  "std::cerr" \
-	  "//std::cerr" && \
+	  "^(\\s*)std::cerr" \
+	  "\\1//std::cerr" && \
 	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
 	  "src/OpenEXR/src/lib/IlmThread/IlmThreadProcessGroup.h" \
-	  "if \(!ret\)( \{\})?" \
-	  "if \(!ret\) \{\}" && \
+	  "^(\\s*)if \\(!ret\\)( \\{\\})?\\s*$$" \
+	  "\\1if (!ret) throw IEX_NAMESPACE::LogicExc (\"ProcessGroup pop failed\");" && \
 	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
 	  "src/OpenEXR/src/lib/OpenEXRCore/internal_structs.c" \
 	  "fflush \(stderr\);" \
 	  ";" && \
+	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
+	  "src/OpenEXR/external/OpenJPH/src/core/others/ojph_message.cpp" \
+	  "FILE\\s*\\*\\s*info_stream\\s*=\\s*stdout\\s*;" \
+	  "  FILE* info_stream = NULL;" && \
+	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
+	  "src/OpenEXR/external/OpenJPH/src/core/others/ojph_message.cpp" \
+	  "FILE\\s*\\*\\s*warning_stream\\s*=\\s*stdout\\s*;" \
+	  "  FILE *warning_stream = NULL;" && \
+	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
+	  "src/OpenEXR/external/OpenJPH/src/core/others/ojph_message.cpp" \
+	  "FILE\\s*\\*\\s*error_stream\\s*=\\s*stderr\\s*;" \
+	  "  FILE *error_stream = NULL;" && \
+	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
+	  "src/OpenEXR/" \
+	  "^(#\\s*pragma warning.*)$$" \
+	  "__COMMENT_MATCHED_LINE__" && \
+	"$(R_HOME)/bin/Rscript" tools/search-replace.R \
+	  "src/OpenEXR/" \
+	  "^(#\\s*pragma GCC diagnostic.*)$$" \
+	  "__COMMENT_MATCHED_LINE__" && \
 	"$(R_HOME)/bin/Rscript" tools/remove_stderr.R \
 	  "src/OpenEXR/" && \
 	cd $(OPENEXR_DIR)/src/OpenEXR/build && \
-	$(CMAKE) -C ../build/initial-cache.cmake .. && \
+	cd $(OPENEXR_DIR)/src/OpenEXR/build-cran && \
 	$(CMAKE) --build . --config Release && \
 	$(CMAKE) --install . --config Release && \
 	cd @PACKAGE_BASE_DIR@ && \
 	"$(R_HOME)/bin/Rscript" tools/fix-line-endings.R \
 	src/Makevars \
-	src/OpenEXR/build/Makefile \
-	src/OpenEXR/build/cmake/Makefile \
-	src/OpenEXR/build/src/lib/Iex/Makefile \
-	src/OpenEXR/build/src/lib/IlmThread/Makefile \
-	src/OpenEXR/build/src/lib/Makefile \
-	src/OpenEXR/build/src/lib/OpenEXR/Makefile \
-	src/OpenEXR/build/src/lib/OpenEXRCore/Makefile \
-	src/OpenEXR/build/src/lib/OpenEXRUtil/Makefile \
-	src/OpenEXR/build/CMakeFiles/*/CompilerIdC/CMakeCCompilerId.c \
-	src/OpenEXR/build/CMakeFiles/*/CompilerIdCXX/CMakeCXXCompilerId.cpp \
-	src/OpenEXR/build/cmake/IexConfig.h \
-	src/OpenEXR/build/cmake/IexConfigInternal.h \
-	src/OpenEXR/build/cmake/IlmThreadConfig.h \
-	src/OpenEXR/build/cmake/OpenEXRConfig.h \
-	src/OpenEXR/build/cmake/OpenEXRConfigInternal.h \
+	src/OpenEXR/build-cran/Makefile \
+	src/OpenEXR/build-cran/cmake/Makefile \
+	src/OpenEXR/build-cran/src/lib/Iex/Makefile \
+	src/OpenEXR/build-cran/src/lib/IlmThread/Makefile \
+	src/OpenEXR/build-cran/src/lib/Makefile \
+	src/OpenEXR/build-cran/src/lib/OpenEXR/Makefile \
+	src/OpenEXR/build-cran/src/lib/OpenEXRCore/Makefile \
+	src/OpenEXR/build-cran/src/lib/OpenEXRUtil/Makefile \
+	src/OpenEXR/build-cran/CMakeFiles/*/CompilerIdC/CMakeCCompilerId.c \
+	src/OpenEXR/build-cran/CMakeFiles/*/CompilerIdCXX/CMakeCXXCompilerId.cpp \
+	src/OpenEXR/build-cran/cmake/IexConfig.h \
+	src/OpenEXR/build-cran/cmake/IexConfigInternal.h \
+	src/OpenEXR/build-cran/cmake/IlmThreadConfig.h \
+	src/OpenEXR/build-cran/cmake/OpenEXRConfig.h \
+	src/OpenEXR/build-cran/cmake/OpenEXRConfigInternal.h \
+	src/OpenEXR/build-cran/arch.c \
+	src/OpenEXR/build-cran/external/OpenJPH/src/core/Makefile \
+	src/OpenEXR/build-cran/external/OpenJPH/Makefile \
 	src/OpenEXR/src/lib/IlmThread/IlmThreadProcessGroup.h \
 	src/OpenEXR/src/lib/OpenEXR/ImfInputPart.cpp \
 	src/OpenEXR/src/lib/OpenEXRCore/chunk.c \
@@ -109,7 +130,5 @@ $(STATIC_LIB):
 	inst/include/OpenEXR/IlmThreadProcessGroup.h \
 	inst/include/OpenEXR/OpenEXRConfig.h
 
-clean: 
-	rm -rf @PACKAGE_BASE_DIR@/src/OpenEXR/build && 
-	rm -rf @PACKAGE_BASE_DIR@/src/Makevars &&
-	rm -rf @PACKAGE_BASE_DIR@/src/Makevars.win
+clean:
+	rm -rf @PACKAGE_BASE_DIR@/src/OpenEXR/build-cran

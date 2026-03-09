@@ -1,7 +1,7 @@
 Package: libopenexr
 Type: Package
 Title: Static Library and Headers for 'OpenEXR' Image I/O
-Version: 3.4.0-5
+Version: 3.4.4-1
 Authors@R: 
     c(
       person(
@@ -124,7 +124,7 @@ Description: Provides the 'OpenEXR' static library and 'C++' headers
     with a basic R interface to load 'EXR' images.
 Depends: R (>= 4.3.0)
 License: BSD_3_clause + file LICENSE
-LinkingTo: libimath, libdeflate
+LinkingTo: libimath (>= 3.2.2)
 Encoding: UTF-8
 LazyData: true
 SystemRequirements: CMake, GNU make
@@ -132,7 +132,7 @@ RoxygenNote: 7.3.2
 Biarch: TRUE
 BugReports: https://github.com/tylermorganwall/libopenexr/issues
 NeedsCompilation: yes
-Packaged: 2025-10-17 02:04:51 UTC; tyler
+Packaged: 2026-03-05 02:29:24 UTC; tyler
 Author: Tyler Morgan-Wall [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-3131-3814>),
   Aaron Demolder [ctb, cph],
@@ -244,4 +244,4 @@ Author: Tyler Morgan-Wall [aut, cre] (ORCID:
   Kevin Ushey [cph]
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-10-17 03:00:02 UTC
+Date/Publication: 2026-03-09 16:30:14 UTC
