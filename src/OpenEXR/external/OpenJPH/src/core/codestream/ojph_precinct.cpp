@@ -45,6 +45,7 @@
 #include "ojph_precinct.h"
 #include "ojph_subband.h"
 #include "ojph_codeblock.h" // for coded_cb_header
+#include "ojph_message.h"
 #include "ojph_bitbuffer_write.h"
 #include "ojph_bitbuffer_read.h"
 
@@ -53,18 +54,22 @@ namespace ojph {
 
   namespace local
   {
-    static constexpr ui32 OJPH_TAG_TREE_MAX_LEVELS = 15; // extra root level fits in levs[]
 
     //////////////////////////////////////////////////////////////////////////
     struct tag_tree
     {
+      static const ui32 max_num_levels = 16;
+
       void init(ui8* buf, ui32 *lev_idx, ui32 num_levels, size s, int init_val)
       {
-        if (num_levels > OJPH_TAG_TREE_MAX_LEVELS)
-          num_levels = OJPH_TAG_TREE_MAX_LEVELS;
+        if (num_levels >= max_num_levels)
+        {
+          OJPH_ERROR(0x000300E1, "too many tag tree levels");
+          num_levels = max_num_levels - 1;
+        }
         for (ui32 i = 0; i <= num_levels; ++i) //on extra level
           levs[i] = buf + lev_idx[i];
-        for (ui32 i = num_levels + 1; i <= OJPH_TAG_TREE_MAX_LEVELS; ++i)
+        for (ui32 i = num_levels + 1; i < max_num_levels; ++i)
           levs[i] = (ui8*)INT_MAX; //make it crash on error
         width = s.w;
         height = s.h;
@@ -79,13 +84,16 @@ namespace ojph {
 
       ui8* get(ui32 x, ui32 y, ui32 lev)
       {
-        if (lev > OJPH_TAG_TREE_MAX_LEVELS)
-          lev = OJPH_TAG_TREE_MAX_LEVELS;
+        if (lev >= max_num_levels)
+        {
+          OJPH_ERROR(0x000300E2, "invalid tag tree level");
+          lev = max_num_levels - 1;
+        }
         return levs[lev] + (x + y * ((width + (1 << lev) - 1) >> lev));
       }
 
       ui32 width, height, num_levels;
-      ui8* levs[OJPH_TAG_TREE_MAX_LEVELS + 1];
+      ui8* levs[max_num_levels]; // you cannot have this high number of levels
     };
 
     //////////////////////////////////////////////////////////////////////////
@@ -114,8 +122,6 @@ namespace ojph {
 
         ui32 num_levels = 1 +
           ojph_max(log2ceil(cb_idxs[s].siz.w), log2ceil(cb_idxs[s].siz.h));
-        if (num_levels > OJPH_TAG_TREE_MAX_LEVELS)
-          num_levels = OJPH_TAG_TREE_MAX_LEVELS;
 
         //create quad trees for inclusion and missing msbs
         tag_tree inc_tag, inc_tag_flags, mmsb_tag, mmsb_tag_flags;
@@ -363,8 +369,6 @@ namespace ojph {
 
         ui32 num_levels = 1 +
           ojph_max(log2ceil(cb_idxs[s].siz.w), log2ceil(cb_idxs[s].siz.h));
-        if (num_levels > OJPH_TAG_TREE_MAX_LEVELS)
-          num_levels = OJPH_TAG_TREE_MAX_LEVELS;
 
         //create quad trees for inclusion and missing msbs
         tag_tree inc_tag, inc_tag_flags, mmsb_tag, mmsb_tag_flags;

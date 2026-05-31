@@ -20,7 +20,7 @@
 #define OPENEXR_VERSION_MAJOR 4
 #define OPENEXR_VERSION_MINOR 0
 #define OPENEXR_VERSION_PATCH 0
-#define OPENEXR_SOVERSION 99
+#define OPENEXR_SOVERSION 33
 #endif
 
 #define OPENEXR_IMATH_SOVERSION 
@@ -29,7 +29,7 @@
 #define OPENEXR_IMATH_VERSION_PATCH 2
 
 #define OPENEXR_OPENJPH_VERSION_MAJOR 0
-#define OPENEXR_OPENJPH_VERSION_MINOR 25
+#define OPENEXR_OPENJPH_VERSION_MINOR 26
 #define OPENEXR_OPENJPH_VERSION_PATCH 3
 
 //
@@ -67,13 +67,13 @@
 //
 
 #define OPENEXR_VERSION_STRING "4.0.0"
-#define OPENEXR_PACKAGE_STRING "OpenEXR 4.0.0-dev"
+#define OPENEXR_PACKAGE_STRING "OpenEXR 4.0.0"
 
-#define OPENEXR_VERSION_RELEASE_TYPE "-dev"
+#define OPENEXR_VERSION_RELEASE_TYPE ""
 // Deprecated, for back compatibility:
-#define OPENEXR_VERSION_EXTRA "-dev"
+#define OPENEXR_VERSION_EXTRA ""
 
-#define OPENEXR_LIB_VERSION_STRING "99.4.0.0"
+#define OPENEXR_LIB_VERSION_STRING "33.4.0.0"
 
 // clang-format on
 
@@ -127,8 +127,10 @@
 ///
 /// @{
 
+// Visibility attributes are ELF-specific; on Windows (MSVC or MinGW) they are
+// not supported and trigger -Wattributes warnings, so use empty macros there.
 #if defined(OPENEXR_ENABLE_API_VISIBILITY) &&                                  \
-    !(defined(OPENEXR_DLL) || defined(_MSC_VER))
+    !(defined(OPENEXR_DLL) || defined(_MSC_VER) || defined(_WIN32))
 #    define OPENEXR_PUBLIC_SYMBOL_ATTRIBUTE                                    \
         __attribute__ ((__visibility__ ("default")))
 #    define OPENEXR_PRIVATE_SYMBOL_ATTRIBUTE                                   \

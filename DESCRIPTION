@@ -1,7 +1,7 @@
 Package: libopenexr
 Type: Package
 Title: Static Library and Headers for 'OpenEXR' Image I/O
-Version: 3.4.4-2
+Version: 3.4.12-4
 Authors@R: 
     c(
       person(
@@ -132,7 +132,7 @@ RoxygenNote: 7.3.2
 Biarch: TRUE
 BugReports: https://github.com/tylermorganwall/libopenexr/issues
 NeedsCompilation: yes
-Packaged: 2026-03-10 05:25:42 UTC; tyler
+Packaged: 2026-05-31 04:02:07 UTC; tyler
 Author: Tyler Morgan-Wall [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-3131-3814>),
   Aaron Demolder [ctb, cph],
@@ -244,4 +244,4 @@ Author: Tyler Morgan-Wall [aut, cre] (ORCID:
   Kevin Ushey [cph]
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-03-10 09:40:20 UTC
+Date/Publication: 2026-05-31 05:20:02 UTC
